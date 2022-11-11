@@ -16,8 +16,6 @@ type Request struct {
 type Response struct {
 }
 
-type ParseStatus int
-
 type Headers map[string]string
 
 func (h Headers) Get(name string) string {
@@ -29,6 +27,8 @@ func (h Headers) Add(name, value string) {
 	k := strings.ToLower(name)
 	h[k] = value
 }
+
+type ParseStatus int
 
 const (
 	ParseBegin = ParseStatus(iota)
