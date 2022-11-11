@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/taoso/sfile/file"
-	shttp "github.com/taoso/sfile/http"
+	"github.com/taoso/sfile/http"
 )
 
 type Server struct {
@@ -45,7 +45,7 @@ func (s *Server) serve(c net.Conn) {
 func (s *Server) serveOnce(c net.Conn) bool {
 	var n int
 	var err error
-	var req shttp.Request
+	var req http.Request
 	buf := make([]byte, 1024)
 
 	for {
@@ -63,10 +63,10 @@ func (s *Server) serveOnce(c net.Conn) bool {
 		}
 
 		status, offset := req.Feed(buf[:n])
-		if status == shttp.ParseError {
+		if status == http.ParseError {
 			log.Println("request parser error")
 			return false
-		} else if status == shttp.ParseDone {
+		} else if status == http.ParseDone {
 			break
 		}
 
