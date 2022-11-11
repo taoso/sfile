@@ -1,18 +1,21 @@
 package sfile
 
 import (
+	"io"
 	"io/fs"
 	"log"
 	"net"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/taoso/sfile/file"
 	shttp "github.com/taoso/sfile/http"
 )
 
 type Server struct {
-	Root fs.FS
+	Root        fs.FS
+	ReadTimeout time.Duration
 }
 
 func (s *Server) ListenAndServe(addr string) error {
@@ -46,12 +49,22 @@ func (s *Server) serveOnce(c net.Conn) bool {
 	buf := make([]byte, 1024)
 
 	for {
+		d := time.Now().Add(s.ReadTimeout)
+		if err = c.SetReadDeadline(d); err != nil {
+			log.Println(err)
+			return false
+		}
+
 		if n, err = c.Read(buf[n:]); err != nil {
+			if !os.IsTimeout(err) && err != io.EOF {
+				log.Println(err)
+			}
 			return false
 		}
 
 		status, offset := req.Feed(buf[:n])
 		if status == shttp.ParseError {
+			log.Println("request parser error")
 			return false
 		} else if status == shttp.ParseDone {
 			break

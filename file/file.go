@@ -37,6 +37,8 @@ func WriteChunk(w io.Writer, f io.Reader) error {
 			return err
 		}
 	}
-	_, err := w.Write([]byte("\r\n0\r\n\r\n"))
-	return err
+	if _, err := w.Write([]byte("\r\n0\r\n\r\n")); err != io.EOF {
+		return err
+	}
+	return nil
 }
