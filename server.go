@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/taoso/sfile/file"
 	"github.com/taoso/sfile/http"
 )
 
@@ -89,7 +88,7 @@ func (s *Server) serveOnce(c net.Conn) bool {
 		c.Write([]byte("HTTP/1.1 500 Internal Server Error\r\n" +
 			"Content-Length:" + length + "\r\n\r\n" + msg))
 		return false
-	} else if err := file.WriteChunk(c, f); err != nil {
+	} else if err := http.WriteChunk(c, f); err != nil {
 		log.Println(err)
 		return false
 	}
