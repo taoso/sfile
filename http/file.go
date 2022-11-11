@@ -6,8 +6,8 @@ import (
 	"strconv"
 )
 
-func WriteChunk(w io.Writer, f io.Reader) error {
-	buf := make([]byte, 1024)
+func WriteChunk(chunkSize int, w io.Writer, f io.Reader) error {
+	buf := make([]byte, chunkSize)
 	headerSent := false
 	for {
 		n, err := f.Read(buf)

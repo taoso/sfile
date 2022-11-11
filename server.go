@@ -14,6 +14,7 @@ import (
 
 type Server struct {
 	Root        fs.FS
+	ChunkSize   int
 	ReadTimeout time.Duration
 }
 
@@ -88,7 +89,7 @@ func (s *Server) serveOnce(c net.Conn) bool {
 		c.Write([]byte("HTTP/1.1 500 Internal Server Error\r\n" +
 			"Content-Length:" + length + "\r\n\r\n" + msg))
 		return false
-	} else if err := http.WriteChunk(c, f); err != nil {
+	} else if err := http.WriteChunk(s.ChunkSize, c, f); err != nil {
 		log.Println(err)
 		return false
 	}
