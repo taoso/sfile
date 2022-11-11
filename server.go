@@ -7,6 +7,7 @@ import (
 	"net"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/taoso/sfile/http"
@@ -89,7 +90,14 @@ func (s *Server) serveOnce(c net.Conn) bool {
 		c.Write([]byte("HTTP/1.1 500 Internal Server Error\r\n" +
 			"Content-Length:" + length + "\r\n\r\n" + msg))
 		return false
-	} else if err := http.WriteChunk(s.ChunkSize, c, f); err != nil {
+	}
+
+	if strings.Contains(req.Headers.Get("Accept-Encoding"), "gzip") {
+		err = http.WriteGzip(2048, c, f)
+	} else {
+		err = http.WriteChunk(s.ChunkSize, c, f)
+	}
+	if err != nil {
 		log.Println(err)
 		return false
 	}
