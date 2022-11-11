@@ -1,18 +1,20 @@
 package http
 
 import (
+	"net/url"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
 func TestParse1(t *testing.T) {
-	buf := []byte("GET /foo.html HTTP/1.1\r\nA:1\r\nB:2\r\n\r\n")
+	path := url.PathEscape("/涛叔.html")
+	buf := []byte("GET " + path + " HTTP/1.1\r\nA:1\r\nB:2\r\n\r\n")
 	req := Request{}
 	status, offset := req.Feed(buf)
 
 	assert.Equal(t, "GET", req.Method)
-	assert.Equal(t, "/foo.html", req.Path)
+	assert.Equal(t, "/涛叔.html", req.Path)
 	assert.Equal(t, "1", req.Headers.Get("a"))
 	assert.Equal(t, "2", req.Headers.Get("B"))
 

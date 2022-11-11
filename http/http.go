@@ -1,6 +1,7 @@
 package http
 
 import (
+	"net/url"
 	"strings"
 )
 
@@ -75,7 +76,12 @@ func (req *Request) Feed(buf []byte) (ParseStatus, int) {
 			}
 		case ParsePath:
 			if !isPrintable(buf[i]) {
-				req.Path = string(buf[p:i])
+				path, err := url.PathUnescape(string(buf[p:i]))
+				if err != nil {
+					status = ParseError
+					break
+				}
+				req.Path = path
 				status = ParseVersionPre
 			}
 		case ParseVersionPre:
