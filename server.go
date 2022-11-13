@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/taoso/sfile/http"
+	slog "github.com/taoso/sfile/log"
 )
 
 type Server struct {
@@ -18,13 +19,25 @@ type Server struct {
 	ChunkSize   int
 	GzipSize    int
 	ReadTimeout time.Duration
+
+	log *slog.Log
 }
 
 func (s *Server) ListenAndServe(addr string) error {
+	s.log = &slog.Log{
+		EntryNum: 1024,
+		Writer:   os.Stderr,
+		Interval: 1 * time.Second,
+	}
+	s.log.Init()
+	go s.log.Loop()
+	defer s.log.Close()
+
 	l, err := net.Listen("tcp", addr)
 	if err != nil {
 		return err
 	}
+
 	for {
 		c, err := l.Accept()
 		if err != nil {
@@ -83,26 +96,32 @@ func (s *Server) serveOnce(c net.Conn) bool {
 	f, err := s.Root.Open(req.Path[1:])
 
 	if os.IsNotExist(err) {
-		c.Write([]byte("HTTP/1.1 404 Not Found\r\n" +
+		sent, _ := c.Write([]byte("HTTP/1.1 404 Not Found\r\n" +
 			"Content-Length:0\r\n\r\n"))
+		s.log.Log(req, "404", sent)
+		return false
 	} else if err != nil {
 		msg := err.Error()
 		length := strconv.Itoa(len(msg))
-		c.Write([]byte("HTTP/1.1 500 Internal Server Error\r\n" +
+		sent, _ := c.Write([]byte("HTTP/1.1 500 Internal Server Error\r\n" +
 			"Content-Length:" + length + "\r\n\r\n" + msg))
+		s.log.Log(req, "500", sent)
 		return false
 	}
 
+	var sent int
 	if strings.Contains(req.Headers.Get("Accept-Encoding"), "gzip") {
-		_, err = http.WriteGzip(s.GzipSize, c, f)
+		sent, err = http.WriteGzip(s.GzipSize, c, f)
 	} else {
-		_, err = http.WriteChunk(s.ChunkSize, c, f)
+		sent, err = http.WriteChunk(s.ChunkSize, c, f)
 	}
 
 	if err != nil {
 		log.Println(err)
 		return false
 	}
+
+	s.log.Log(req, "200", sent)
 
 	if req.Headers.Get("Connection") == "close" || req.Version < "HTTP/1.1" {
 		return false
