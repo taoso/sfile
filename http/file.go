@@ -9,58 +9,66 @@ import (
 	"strings"
 )
 
-func WriteChunk(chunkSize int, w io.Writer, f io.Reader) error {
-	buf := make([]byte, chunkSize)
+func WriteChunk(chunkSize int, w io.Writer, f io.Reader) (int, error) {
+	sent := 0
 	headerSent := false
+	buf := make([]byte, chunkSize)
+
 	for {
 		n, err := f.Read(buf)
 		if err != nil && err != io.EOF {
-			return err
+			return 0, err
 		}
 		chunk := buf[:n]
 		if !headerSent {
 			ctype := http.DetectContentType(chunk)
-			_, err = w.Write([]byte("HTTP/1.1 200 OK\r\n" +
+			i, err := w.Write([]byte("HTTP/1.1 200 OK\r\n" +
 				"Transfer-Encoding: chunked\r\n" +
 				"Content-Type: " + ctype + "\r\n"))
 			if err != nil {
-				return err
+				return 0, err
 			}
+			sent += i
 			headerSent = true
 		}
 		if n == 0 {
 			break
 		}
 		hexSize := strconv.FormatInt(int64(n), 16)
-		_, err = w.Write([]byte("\r\n" + hexSize + "\r\n"))
+		i, err := w.Write([]byte("\r\n" + hexSize + "\r\n"))
 		if err != nil {
-			return err
+			return 0, err
 		}
-		if _, err := w.Write(chunk); err != nil {
-			return err
+		sent += i
+		if i, err = w.Write(chunk); err != nil {
+			return 0, err
 		}
+		sent += i
 	}
-	if _, err := w.Write([]byte("\r\n0\r\n\r\n")); err != io.EOF {
-		return err
+	i, err := w.Write([]byte("\r\n0\r\n\r\n"))
+	if err != nil {
+		return 0, err
 	}
-	return nil
+	sent += i
+	return sent, nil
 }
 
-func WriteGzip(zipSize int, w io.Writer, f io.Reader) error {
+func WriteGzip(zipSize int, w io.Writer, f io.Reader) (int, error) {
 	data, err := io.ReadAll(f)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	ctype := http.DetectContentType(data)
+
 	var gziped bool
+	ctype := http.DetectContentType(data)
 	if strings.HasPrefix(ctype, "text/") && len(data) > zipSize {
 		var buf bytes.Buffer
 		zw, _ := gzip.NewWriterLevel(&buf, gzip.DefaultCompression)
-		if _, err := zw.Write(data); err != nil {
-			return err
+		if _, err = zw.Write(data); err != nil {
+			return 0, err
 		}
-		if err := zw.Close(); err != nil {
-			return err
+		if err = zw.Close(); err != nil {
+			return 0, err
 		}
 		data = buf.Bytes()
 		gziped = true
@@ -75,11 +83,16 @@ func WriteGzip(zipSize int, w io.Writer, f io.Reader) error {
 	} else {
 		header += "\r\n"
 	}
-	_, err = w.Write([]byte(header))
+
+	sent, err := w.Write([]byte(header))
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	_, err = w.Write(data)
-	return err
+	n, err := w.Write(data)
+	if err != nil {
+		return 0, err
+	}
+	sent += n
+	return sent, nil
 }

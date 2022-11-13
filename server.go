@@ -16,6 +16,7 @@ import (
 type Server struct {
 	Root        fs.FS
 	ChunkSize   int
+	GzipSize    int
 	ReadTimeout time.Duration
 }
 
@@ -93,10 +94,11 @@ func (s *Server) serveOnce(c net.Conn) bool {
 	}
 
 	if strings.Contains(req.Headers.Get("Accept-Encoding"), "gzip") {
-		err = http.WriteGzip(2048, c, f)
+		_, err = http.WriteGzip(s.GzipSize, c, f)
 	} else {
-		err = http.WriteChunk(s.ChunkSize, c, f)
+		_, err = http.WriteChunk(s.ChunkSize, c, f)
 	}
+
 	if err != nil {
 		log.Println(err)
 		return false
@@ -105,5 +107,6 @@ func (s *Server) serveOnce(c net.Conn) bool {
 	if req.Headers.Get("Connection") == "close" || req.Version < "HTTP/1.1" {
 		return false
 	}
+
 	return true
 }
