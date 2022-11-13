@@ -1,4 +1,4 @@
-package sfile
+package server
 
 import (
 	"io"

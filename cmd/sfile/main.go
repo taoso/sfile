@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/taoso/sfile"
+	"github.com/taoso/sfile/server"
 )
 
 func main() {
@@ -31,7 +31,7 @@ func main() {
 		}
 	}
 
-	s := sfile.Server{}
+	s := server.Server{}
 	s.Root = os.DirFS(root)
 	s.ReadTimeout = timeout
 	s.ChunkSize = chunk
