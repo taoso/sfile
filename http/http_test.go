@@ -25,10 +25,13 @@ func TestParse1(t *testing.T) {
 func TestParse2(t *testing.T) {
 	req := Request{}
 
-	req.Feed([]byte("GET /foo.html HTTP/1.1\r\n"))
-	req.Feed([]byte("A:1\r\n"))
-	req.Feed([]byte("B:2\r\n"))
-	s, _ := req.Feed([]byte("\r\n"))
+	s, o := req.Feed([]byte("GET /foo.html HTTP/1"))
+	assert.Equal(t, 14, o)
+	assert.Equal(t, ParseVersion, s)
+
+	req.Feed([]byte("HTTP/1.1\r\nA"))
+	req.Feed([]byte("A:1\r\nB:2\r\n"))
+	s, _ = req.Feed([]byte("\r\n"))
 
 	assert.Equal(t, ParseDone, s)
 

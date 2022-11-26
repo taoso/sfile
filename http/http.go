@@ -11,6 +11,9 @@ type Request struct {
 	Version string
 	Headers Headers
 
+	headerName  string
+	headerValue string
+
 	status ParseStatus
 }
 
@@ -56,7 +59,6 @@ func (req *Request) Feed(buf []byte) (ParseStatus, int) {
 	if req.status != ParseBegin {
 		status = req.status
 	}
-	var headerName, headerValue string
 	for i = 0; i < len(buf); i++ {
 		switch status {
 		case ParseBegin:
@@ -113,13 +115,14 @@ func (req *Request) Feed(buf []byte) (ParseStatus, int) {
 				continue
 			} else if buf[i] == '\n' {
 				status = ParseDone
+				p = i + 1
 				break
 			}
 		case ParseHeaderName:
 			if isAlpha(buf[i]) || buf[i] == '-' {
 				continue
 			} else if buf[i] == ':' {
-				headerName = string(buf[p:i])
+				req.headerName = string(buf[p:i])
 				status = ParseHeaderValuePre
 				continue
 			} else if buf[i] == '\r' {
@@ -130,6 +133,10 @@ func (req *Request) Feed(buf []byte) (ParseStatus, int) {
 		case ParseDonePre:
 			if buf[i] == '\n' {
 				status = ParseDone
+				p = i + 1
+				break
+			} else {
+				status = ParseError
 				break
 			}
 		case ParseHeaderValuePre:
@@ -149,11 +156,11 @@ func (req *Request) Feed(buf []byte) (ParseStatus, int) {
 				if buf[i-1] == '\r' {
 					n--
 				}
-				headerValue = string(buf[p:n])
+				req.headerValue = string(buf[p:n])
 				if req.Headers == nil {
 					req.Headers = Headers{}
 				}
-				req.Headers.Add(headerName, headerValue)
+				req.Headers.Add(req.headerName, req.headerValue)
 
 				status = ParseHeaderNamePre
 			}
@@ -165,7 +172,7 @@ func (req *Request) Feed(buf []byte) (ParseStatus, int) {
 
 	req.status = status
 
-	return status, i
+	return status, p
 }
 
 func isAlpha(c byte) bool {
