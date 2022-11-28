@@ -58,26 +58,27 @@ func (s *Server) serve(c net.Conn) {
 }
 
 func (s *Server) serveOnce(c net.Conn) bool {
-	var n int
+	var r int
 	var err error
 	var req http.Request
-	buf := make([]byte, 1024)
+	buf := make([]byte, 60)
 
 	for {
+		var n int
 		d := time.Now().Add(s.ReadTimeout)
 		if err = c.SetReadDeadline(d); err != nil {
 			log.Println(err)
 			return false
 		}
 
-		if n, err = c.Read(buf[n:]); err != nil {
+		if n, err = c.Read(buf[r:]); err != nil {
 			if !os.IsTimeout(err) && err != io.EOF {
 				log.Println(err)
 			}
 			return false
 		}
 
-		status, offset := req.Feed(buf[:n])
+		status, offset := req.Feed(buf[:n+r])
 		if status == http.ParseError {
 			log.Println("request parser error")
 			return false
@@ -87,9 +88,9 @@ func (s *Server) serveOnce(c net.Conn) bool {
 
 		if offset < n {
 			copy(buf, buf[offset:n])
-			n -= offset
+			r = n - offset
 		} else {
-			n = 0
+			r = 0
 		}
 	}
 
